@@ -49,12 +49,12 @@ def _connect_form() -> ui.UINode:
         action="__tool__connect_netsuite",
         submit_label="Connect NetSuite",
         children=[
-            ui.Input(name="label", label="Label", placeholder="e.g. Acme production ERP", required=False),
-            ui.Input(name="account_id", label="Account ID", placeholder="e.g. 1234567 or 1234567_SB1", required=True),
-            ui.Input(name="consumer_key", label="Consumer Key", placeholder="From the Integration record", required=True, sensitive=True),
-            ui.Input(name="consumer_secret", label="Consumer Secret", placeholder="From the same Integration record", required=True, sensitive=True),
-            ui.Input(name="token_key", label="Token Key", placeholder="From the Access Token page", required=True, sensitive=True),
-            ui.Input(name="token_secret", label="Token Secret", placeholder="From the same Access Token page", required=True, sensitive=True),
+            ui.Input(param_name="label", placeholder="e.g. Acme production ERP"),
+            ui.Input(param_name="account_id", placeholder="e.g. 1234567 or 1234567_SB1"),
+            ui.Input(param_name="consumer_key", placeholder="Consumer key from the Integration record"),
+            ui.Input(param_name="consumer_secret", placeholder="Consumer secret from the same Integration record"),
+            ui.Input(param_name="token_key", placeholder="Token key from the Access Token page"),
+            ui.Input(param_name="token_secret", placeholder="Token secret from the same Access Token page"),
         ],
     )
 
