@@ -1,0 +1,875 @@
+{
+  "manifest_schema_version": 3,
+  "sdk_version": "5.13.1",
+  "app_id": "netsuite-connector",
+  "version": "0.1.0",
+  "name": "NetSuite",
+  "description": "Connect your own Oracle NetSuite account via Token-Based Authentication (consumer + token pairs) -- CRUD on any record type (customers, sales orders, invoices, items, vendors), SuiteQL queries, record field schemas, plus ERP health reports.",
+  "icon": "icon.svg",
+  "actions_explicit": true,
+  "system": false,
+  "capabilities": [
+    "netsuite:read",
+    "netsuite:write"
+  ],
+  "tools": [
+    {
+      "name": "connect_netsuite",
+      "description": "Connect an Oracle NetSuite account by saving its account id plus TBA credentials (consumer key/secret from an Integration record, token key/secret from an Access Token), after verifying them live against the SuiteTalk REST metadata catalog.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "label": {
+            "default": "",
+            "description": "A friendly name for this account, e.g. 'Acme production ERP'.",
+            "title": "Label",
+            "type": "string"
+          },
+          "account_id": {
+            "description": "NetSuite account id, e.g. '1234567' (production) or '1234567_SB1' (sandbox).",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "consumer_key": {
+            "description": "Consumer key from the NetSuite Integration record (TBA enabled).",
+            "title": "Consumer Key",
+            "type": "string"
+          },
+          "consumer_secret": {
+            "description": "Consumer secret from the same Integration record.",
+            "title": "Consumer Secret",
+            "type": "string"
+          },
+          "token_key": {
+            "description": "Token key from the NetSuite Access Token page.",
+            "title": "Token Key",
+            "type": "string"
+          },
+          "token_secret": {
+            "description": "Token secret from the same Access Token page.",
+            "title": "Token Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "consumer_key",
+          "consumer_secret",
+          "token_key",
+          "token_secret"
+        ],
+        "title": "ConnectNetsuiteParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connected",
+          "connection_id",
+          "label",
+          "message"
+        ],
+        "title": "ConnectNetsuiteResult",
+        "type": "object"
+      },
+      "event": "netsuite.connection.created",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "list_connections",
+      "description": "List the connected NetSuite accounts — label, account id, masked consumer key. Secret values are never shown.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          }
+        },
+        "title": "ConnectionIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "ConnectionRecord": {
+            "properties": {
+              "id": {
+                "title": "Id",
+                "type": "string"
+              },
+              "label": {
+                "title": "Label",
+                "type": "string"
+              },
+              "account_id": {
+                "title": "Account Id",
+                "type": "string"
+              },
+              "masked_key": {
+                "title": "Masked Key",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "account_id",
+              "masked_key"
+            ],
+            "title": "ConnectionRecord",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/ConnectionRecord"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "ConnectionList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "disconnect_netsuite",
+      "description": "Disconnect a NetSuite account: deletes the saved TBA credentials from Imperal. Nothing in NetSuite itself is changed; the Access Token can be revoked in NetSuite at any time.",
+      "action_type": "destructive",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          }
+        },
+        "title": "ConnectionIdParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "message"
+        ],
+        "title": "DeleteResult",
+        "type": "object"
+      },
+      "event": "netsuite.connection.deleted",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "list_records",
+      "description": "List NetSuite records of any record type (customer, salesorder, invoice, item, vendor, ...) with limit/offset pagination, via SuiteTalk record/v1.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "record_type": {
+            "description": "NetSuite record type, e.g. 'customer', 'salesorder', 'invoice', 'item', 'vendor'.",
+            "title": "Record Type",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Max records to return (1-1000).",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Skip this many records (pagination).",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "record_type"
+        ],
+        "title": "ListRecordsParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Total"
+          },
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RecordList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "get_record",
+      "description": "Read one NetSuite record of any type in full by its internal id (e.g. customer 1042).",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "record_type": {
+            "description": "NetSuite record type, e.g. 'customer'.",
+            "title": "Record Type",
+            "type": "string"
+          },
+          "record_id": {
+            "description": "Internal id of the record.",
+            "title": "Record Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_type",
+          "record_id"
+        ],
+        "title": "GetRecordParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "record": {
+            "additionalProperties": true,
+            "title": "Record",
+            "type": "object"
+          }
+        },
+        "required": [
+          "record"
+        ],
+        "title": "RecordDetail",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "get_record_schema",
+      "description": "Read a NetSuite record type's field schema from the REST metadata catalog -- which fields exist, their types, and which are required. Use before create_record/update_record.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "record_type": {
+            "description": "NetSuite record type whose field schema to read, e.g. 'customer'.",
+            "title": "Record Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_type"
+        ],
+        "title": "GetSchemaParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "record_type": {
+            "title": "Record Type",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "record_type",
+          "schema"
+        ],
+        "title": "RecordSchemaResult",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "create_record",
+      "description": "Create a new NetSuite record of any type from a JSON object of its fields (use get_record_schema first to see valid fields), e.g. a new customer or sales order.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "record_type": {
+            "description": "NetSuite record type to create, e.g. 'customer'.",
+            "title": "Record Type",
+            "type": "string"
+          },
+          "fields_json": {
+            "description": "JSON object of the record's fields, e.g. {\"companyName\": \"Acme Ltd\"}. Use get_record_schema first to see valid fields.",
+            "title": "Fields Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_type",
+          "fields_json"
+        ],
+        "title": "CreateRecordParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "record_id": {
+            "default": "",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "RecordWriteResult",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "update_record",
+      "description": "Update selected fields of an existing NetSuite record (PATCH). Only the fields in fields_json change.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "record_type": {
+            "description": "NetSuite record type, e.g. 'customer'.",
+            "title": "Record Type",
+            "type": "string"
+          },
+          "record_id": {
+            "description": "Internal id of the record to update.",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "fields_json": {
+            "description": "JSON object of only the fields to change.",
+            "title": "Fields Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_type",
+          "record_id",
+          "fields_json"
+        ],
+        "title": "UpdateRecordParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "record_id": {
+            "default": "",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "RecordWriteResult",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "delete_record",
+      "description": "Permanently delete a NetSuite record of any type by internal id. Cannot be undone through the API.",
+      "action_type": "destructive",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "record_type": {
+            "description": "NetSuite record type, e.g. 'customer'.",
+            "title": "Record Type",
+            "type": "string"
+          },
+          "record_id": {
+            "description": "Internal id of the record to delete.",
+            "title": "Record Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_type",
+          "record_id"
+        ],
+        "title": "DeleteRecordParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "message"
+        ],
+        "title": "DeleteResult",
+        "type": "object"
+      },
+      "event": "netsuite.record.deleted",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "run_suiteql",
+      "description": "Run a SuiteQL SELECT query against NetSuite (query/v1/suiteql) -- the most powerful read path: joins, filters, aggregates. Read-only; writes go through create_record/update_record. Limit 1-1000 rows.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "query": {
+            "description": "SuiteQL SELECT query, e.g. \"SELECT id, companyName FROM customer\". Read-only.",
+            "title": "Query",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Max rows to return (1-1000).",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Skip this many rows (pagination).",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "RunSuiteqlParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Total"
+          },
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "SuiteqlResult",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "get_account_overview_report",
+      "description": "Value-add report: one-glance NetSuite account snapshot -- record counts for customers, vendors, sales orders, invoices and items, plus credential liveness, in a single call.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "scan_limit": {
+            "default": 100,
+            "description": "How many rows each report scan reads.",
+            "maximum": 1000,
+            "minimum": 10,
+            "title": "Scan Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ReportParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "label",
+          "account_id",
+          "counts"
+        ],
+        "title": "AccountOverviewReport",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    },
+    {
+      "name": "get_open_sales_orders_report",
+      "description": "Value-add report: sales orders not yet fully billed or closed -- id, date, entity, amount, status -- so fulfillment/billing follow-up is one call away.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Saved connection id; empty uses the most recent connection.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "scan_limit": {
+            "default": 100,
+            "description": "How many rows each report scan reads.",
+            "maximum": 1000,
+            "minimum": 10,
+            "title": "Scan Limit",
+            "type": "integer"
+          }
+        },
+        "title": "ReportParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "scanned": {
+            "title": "Scanned",
+            "type": "integer"
+          },
+          "open_count": {
+            "title": "Open Count",
+            "type": "integer"
+          },
+          "orders": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "label",
+          "scanned",
+          "open_count",
+          "orders"
+        ],
+        "title": "OpenSalesOrdersReport",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "netsuite"
+    }
+  ],
+  "signals": [],
+  "schedules": [],
+  "required_scopes": [],
+  "icon_size_bytes": 804,
+  "lifecycle": {
+    "health_check": {
+      "interval_sec": 60
+    }
+  },
+  "secrets": [
+    {
+      "name": "netsuite_connections",
+      "description": "JSON array of saved NetSuite connections (label + account id + TBA consumer/token pairs).",
+      "required": false,
+      "write_mode": "extension",
+      "max_bytes": 65536,
+      "scope": "user",
+      "rotation_hint_days": 365
+    }
+  ],
+  "panels": [
+    {
+      "panel_id": "secrets",
+      "slot": "right",
+      "title": "Secrets",
+      "tree": {},
+      "icon": "KeyRound",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "netsuite_connect",
+      "slot": "left",
+      "title": "NetSuite",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "netsuite_settings",
+      "slot": "center",
+      "title": "NetSuite settings",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "netsuite_secrets",
+      "slot": "right",
+      "title": "NetSuite secrets",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    }
+  ]
+}

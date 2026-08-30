@@ -1,0 +1,14 @@
+{
+  "connect_netsuite": 0,
+  "create_record": 16,
+  "delete_record": 24,
+  "disconnect_netsuite": 0,
+  "get_account_overview_report": 40,
+  "get_open_sales_orders_report": 24,
+  "get_record": 8,
+  "get_record_schema": 8,
+  "list_connections": 0,
+  "list_records": 8,
+  "run_suiteql": 8,
+  "update_record": 16
+}
