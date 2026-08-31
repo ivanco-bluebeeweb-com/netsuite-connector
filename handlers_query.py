@@ -39,4 +39,4 @@ async def run_suiteql(ctx, params: RunSuiteqlParams) -> ActionResult:
         rows = []
     total = data.get("totalResults") if isinstance(data, dict) else None
     has_more = bool(isinstance(data, dict) and data.get("hasMore"))
-    return ActionResult.success(SuiteqlResult(rows=rows, total=total, has_more=has_more))
+    return ActionResult.success(SuiteqlResult(rows=rows, total=total, has_more=has_more), summary="Suiteql run requested.")

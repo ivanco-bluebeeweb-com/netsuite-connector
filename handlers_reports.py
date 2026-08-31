@@ -42,7 +42,7 @@ async def get_account_overview_report(ctx, params: ReportParams) -> ActionResult
         account_id=conn.get("account_id", ""),
         counts=counts,
         notes=notes,
-    ))
+    ), summary="Account overview report retrieved.")
 
 
 @chat.function(
@@ -91,4 +91,4 @@ async def get_open_sales_orders_report(ctx, params: ReportParams) -> ActionResul
         open_count=len(orders),
         orders=orders,
         notes=notes,
-    ))
+    ), summary="Open sales orders report retrieved.")

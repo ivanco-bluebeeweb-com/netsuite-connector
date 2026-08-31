@@ -56,7 +56,7 @@ async def list_records(ctx, params: ListRecordsParams) -> ActionResult:
     items = _items(data)
     total = data.get("totalResults") if isinstance(data, dict) else None
     has_more = bool(isinstance(data, dict) and data.get("hasMore"))
-    return ActionResult.success(RecordList(items=items, total=total, has_more=has_more))
+    return ActionResult.success(RecordList(items=items, total=total, has_more=has_more), summary="Records listed.")
 
 
 @chat.function(
@@ -73,7 +73,7 @@ async def get_record(ctx, params: GetRecordParams) -> ActionResult:
         data = await nc.request(conn, "GET", f"/record/v1/{params.record_type}/{params.record_id}")
     except nc.NetsuiteError as exc:
         return ActionResult.error(exc.code, exc.message)
-    return ActionResult.success(RecordDetail(record=data if isinstance(data, dict) else {"raw": data}))
+    return ActionResult.success(RecordDetail(record=data if isinstance(data, dict) else {"raw": data}), summary="Record retrieved.")
 
 
 @chat.function(
@@ -94,7 +94,7 @@ async def get_record_schema(ctx, params: GetSchemaParams) -> ActionResult:
     return ActionResult.success(RecordSchemaResult(
         record_type=params.record_type,
         schema=data if isinstance(data, dict) else {"raw": data},
-    ))
+    ), summary="Record schema retrieved.")
 
 
 @chat.function(
@@ -120,7 +120,7 @@ async def create_record(ctx, params: CreateRecordParams) -> ActionResult:
         rid = str(data.get("id") or "")
     return ActionResult.success(RecordWriteResult(
         ok=True, record_id=rid, message=f"{params.record_type} created.",
-    ))
+    ), summary="Record created.")
 
 
 @chat.function(
@@ -142,7 +142,7 @@ async def update_record(ctx, params: UpdateRecordParams) -> ActionResult:
         return ActionResult.error(exc.code, exc.message)
     return ActionResult.success(RecordWriteResult(
         ok=True, record_id=params.record_id, message=f"{params.record_type} {params.record_id} updated.",
-    ))
+    ), summary="Record updated.")
 
 
 @chat.function(
@@ -162,4 +162,4 @@ async def delete_record(ctx, params: DeleteRecordParams) -> ActionResult:
         return ActionResult.error(exc.code, exc.message)
     return ActionResult.success(DeleteResult(
         deleted=True, message=f"{params.record_type} {params.record_id} deleted.",
-    ))
+    ), summary="Record deleted.")

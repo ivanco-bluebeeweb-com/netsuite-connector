@@ -94,7 +94,7 @@ async def connect_netsuite(ctx, params: ConnectNetsuiteParams) -> ActionResult:
         connection_id=conn["id"],
         label=label,
         message=f"Connected and verified against account {conn['account_id']}.",
-    ))
+    ), summary="Netsuite connected.")
 
 
 @chat.function(
@@ -116,7 +116,7 @@ async def list_connections(ctx, params: ConnectionIdParams) -> ActionResult:
         )
         for c in conns
     ]
-    return ActionResult.success(ConnectionList(items=items, total=len(items)))
+    return ActionResult.success(ConnectionList(items=items, total=len(items)), summary="Connections listed.")
 
 
 @chat.function(
@@ -138,4 +138,4 @@ async def disconnect_netsuite(ctx, params: ConnectionIdParams) -> ActionResult:
     if len(remaining) == len(conns):
         return ActionResult.error(nc.NS_NOT_FOUND, f"No saved connection with id '{target}'.")
     await _save_connections(ctx, remaining)
-    return ActionResult.success(DeleteResult(deleted=True, message="Connection removed from Imperal."))
+    return ActionResult.success(DeleteResult(deleted=True, message="Connection removed from Imperal."), summary="Netsuite disconnected.")
